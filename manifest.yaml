@@ -126,6 +126,40 @@ services:
       - "payment.failed"
     notes: "Already in production. API spec in references/existing-apis/"
 
+  # --- Agent Architect UI ---
+  - name: "agent-architect-ui"
+    type: "ui"
+    status: "new"
+    description: "Visual orchestration UI for Agent Architect — dashboard, manifest editor, spec browser, review gate"
+    owner: ""
+    repo: ""
+    local_path: ""
+    port: 3001
+    database: null
+    depends_on:
+      - "agent-orchestration-bff"
+    owns_events: []
+    notes: "Next.js 15 / TypeScript. See standards/ui-architecture.md for patterns."
+
+  # --- Agent Orchestration BFF ---
+  - name: "agent-orchestration-bff"
+    type: "bff"
+    status: "new"
+    description: "Backend-for-frontend serving the agent-architect-ui — reads/writes planning repo, orchestrates CLI execution"
+    owner: ""
+    repo: ""
+    local_path: ""
+    port: 4001
+    database: null
+    depends_on: []
+    owns_events:
+      - "approval.granted"
+      - "phase.triggered"
+      - "sse:file-change"
+      - "sse:phase-output"
+      - "sse:phase-complete"
+    notes: "Reads manifest.yaml, services/, contracts/, phases/ from planning repo filesystem. Triggers Claude CLI headless (-p) for agent execution. Streams output via SSE."
+
 # ---------------------------------------------------------------------------
 # ENVIRONMENTS — Where services run
 # ---------------------------------------------------------------------------
