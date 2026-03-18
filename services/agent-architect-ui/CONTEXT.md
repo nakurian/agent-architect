@@ -2,7 +2,7 @@
 
 ## Purpose
 
-A web-based orchestration UI that serves as the visual control plane for Agent Architect projects. It solves the visibility gap — Agent Architect is powerful but invisible as a folder-of-markdown framework operated via CLI slash commands. The UI provides a dashboard for phase progression, visual manifest editing, spec/contract review, and the Human Review Gate between Phase 4→5.
+A web-based UI that serves as the visual control plane for Agent Architect projects. It solves the visibility gap — Agent Architect is powerful but invisible as a folder-of-markdown framework operated via CLI slash commands. The UI provides a dashboard for phase progression, visual manifest editing, spec/contract review, and the Human Review Gate between Phase 4→5.
 
 ## Responsibilities
 
@@ -10,7 +10,6 @@ A web-based orchestration UI that serves as the visual control plane for Agent A
 - Render and browse specs and contracts (markdown + OpenAPI)
 - Provide a visual editor for `manifest.yaml` (add/edit services, dependencies, tech stack)
 - Implement the Human Review Gate approval workflow with sign-off tracking
-- Trigger agent phase execution via headless CLI and display real-time progress
 - Display quality scorecard results from Phase 7 reviews
 
 ### Screens
@@ -25,7 +24,6 @@ Each responsibility maps to a screen in the UI:
 | Spec Viewer/Editor | Markdown rendering + inline commenting for specs | Markdown renderer, two-column layout |
 | Contract Browser | OpenAPI spec viewer, event schema browser | Data table, code highlighting |
 | Review Gate | Approval workflow with sign-off tracking | Modal, form, audit trail table |
-| Build Monitor | Real-time build progress across services | SSE stream, status indicators, terminal output |
 | Quality Scorecard | Phase 7 review results, coverage, security findings | Charts, data table, score badges |
 
 ## Key Entities
@@ -49,25 +47,22 @@ Each responsibility maps to a screen in the UI:
 
 ### Publishes
 
-None — the UI triggers actions via HTTP requests to the BFF. Domain events (`approval.granted`, `phase.triggered`) are published by `agent-orchestration-bff`.
+None — the UI triggers actions via HTTP requests to the BFF. Domain events (`approval.granted`) are published by `agent-orchestration-bff`.
 
 ### Subscribes To
 
 | Event | Source Service | Action Taken |
 |-------|---------------|-------------|
 | sse:file-change | agent-orchestration-bff | Refresh dashboard, spec viewer, phase status |
-| sse:phase-output | agent-orchestration-bff | Display real-time build output in Build Monitor |
-| sse:phase-complete | agent-orchestration-bff | Update phase status, show completion notification |
 
 ## External Dependencies
 
-- **agent-orchestration-bff** — all data access and agent execution goes through the BFF
+- **agent-orchestration-bff** — all data access goes through the BFF
 - **UI template / component library** — base scaffolding for layout, forms, tables, and theming (e.g., a Next.js starter, MUI, shadcn/ui, or an internal template)
 
 ## Special Considerations
 
 - The UI is a **separate repository** from the planning repo — see `standards/ui-architecture.md` for architectural patterns and rationale
 - No direct filesystem access — all data comes from the BFF
-- Must handle long-running agent executions gracefully (SSE streaming, timeout handling)
 - Review Gate is the critical workflow — this is the Human Review Gate between Phase 4→5 where humans approve specs/contracts before code generation begins
 - Must work in solo mode (no auth) and team mode (pluggable SSO/OAuth) — auth should not be hardcoded to a specific provider

@@ -145,7 +145,7 @@ services:
   - name: "agent-orchestration-bff"
     type: "bff"
     status: "new"
-    description: "Backend-for-frontend serving the agent-architect-ui — reads/writes planning repo, orchestrates CLI execution"
+    description: "Backend-for-frontend serving the agent-architect-ui — reads/writes planning repo filesystem"
     owner: ""
     repo: ""
     local_path: ""
@@ -154,11 +154,8 @@ services:
     depends_on: []
     owns_events:
       - "approval.granted"
-      - "phase.triggered"
       - "sse:file-change"
-      - "sse:phase-output"
-      - "sse:phase-complete"
-    notes: "Reads manifest.yaml, services/, contracts/, phases/ from planning repo filesystem. Triggers Claude CLI headless (-p) for agent execution. Streams output via SSE."
+    notes: "Reads manifest.yaml, services/, contracts/, phases/ from planning repo filesystem. Streams file changes to UI via SSE."
 
 # ---------------------------------------------------------------------------
 # ENVIRONMENTS — Where services run
