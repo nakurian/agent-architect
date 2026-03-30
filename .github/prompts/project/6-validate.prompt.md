@@ -88,6 +88,16 @@ Complete `phases/6-validate.md` with:
 - Issues found and recommended fixes
 - System-wide docker-compose.yaml location
 
+### Local E2E Testing (MANDATORY for UI services)
+1. Read config repos for TST environment URLs and secrets
+2. Handle SSL/cert requirements (check for `ca_trust` patterns in sibling config repos)
+3. Start all required services locally (BFF pointed to TST, UI pointed to local BFF)
+4. Run Playwright E2E tests covering key user journeys:
+   - Happy path with real TST data
+   - Verify new features render correctly
+   - Compare UI screenshots against Figma designs
+5. Document test results with screenshots in the validation report
+
 ## Important Rules
 - Do NOT fix issues in service code — report them for the builder agent to fix
 - Focus on INTERFACES between services, not internal logic

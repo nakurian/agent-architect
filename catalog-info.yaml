@@ -1,0 +1,15 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: agent-architect
+  description: Template repository for AI-driven multi-service system development
+  annotations:
+    github.com/project-slug: your-org/agent-architect
+  links:
+    - url: https://github.com/your-org/agent-architect
+      title: GitHub Repository
+      icon: github
+spec:
+  type: service
+  lifecycle: experimental
+  owner: group:your-org/your-team

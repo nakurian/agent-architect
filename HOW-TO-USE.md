@@ -37,11 +37,11 @@ No other dependencies. The framework is just markdown files and folders.
 
 ```bash
 # Option A: GitHub template (recommended)
-gh repo create my-project-plan --template nakurian/agent-architect --private
+gh repo create my-project-plan --template your-org/agent-architect --private
 cd my-project-plan
 
 # Option B: Clone and disconnect
-git clone https://github.com/nakurian/agent-architect.git my-project-plan
+git clone https://github.com/your-org/agent-architect.git my-project-plan
 cd my-project-plan
 rm -rf .git && git init
 git add -A && git commit -m "feat: init from agent-architect template"
@@ -565,7 +565,7 @@ For autonomous execution via GitHub Issues:
    ```
    Title: Build order-service from spec
 
-   Follow the instructions in .github/prompts/5-build.prompt.md
+   Follow the instructions in .github/prompts/project/5-build.prompt.md
    to build the order-service. The spec is at
    services/order-service/specs/SPEC.md.
    ```
@@ -576,7 +576,7 @@ For autonomous execution via GitHub Issues:
 
 ### Keeping prompts in sync
 
-After editing any `.claude/commands/*.md` file:
+After editing any `.claude/commands/project/*.md` file:
 
 ```bash
 ./scripts/sync-prompts.sh
@@ -706,7 +706,7 @@ Re-read the spec: the builder always reads `SPEC.md` fresh. If you edited it man
 
 ### Copilot prompts are outdated
 
-After editing `.claude/commands/*.md`, re-sync:
+After editing `.claude/commands/project/*.md`, re-sync:
 ```bash
 ./scripts/sync-prompts.sh
 ```

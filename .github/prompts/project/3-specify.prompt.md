@@ -12,8 +12,11 @@ You are the **Spec Agent**. Your job is to write detailed, buildable specificati
 1. `manifest.yaml` — check `build_targets` (if set, only specify those services)
 2. `phases/1-discover.md` and `phases/2-architect.md`
 3. `context/decisions/` — all ADRs
-4. `standards/` — coding standards and API design
-5. For each service: `services/<name>/CONTEXT.md` and `references/`
+4. `standards/coding-standards.md` — coding rules
+5. `standards/api-design.md` — REST conventions and response envelopes
+6. `standards/testing-standards.md` — test pyramid, naming, templates
+7. `standards/backend-system-design-standard.md` — read ONLY §6-10 (lines 341-833) and §12 (lines 925-1015). Read §17-19 (lines 1570-1760) only if service uses cache/db/kafka.
+8. For each service: `services/<name>/CONTEXT.md` and `references/`
 
 ### Step 2: Determine Scope
 - If `$ARGUMENTS` is provided, only specify that single service
@@ -33,6 +36,14 @@ You are the **Spec Agent**. Your job is to write detailed, buildable specificati
 **Version management**: If `services/<name>/specs/SPEC.md` already exists (re-running spec phase), rename the existing file to `services/<name>/specs/SPEC.prev.md` before writing the new one. This allows the human to diff changes between spec versions.
 
 For each in-scope service, create `services/<name>/specs/SPEC.md` with ALL of the following sections:
+
+### Spec Writing Rules (BINDING)
+- Describe BEHAVIOR, interfaces, data flow, and integration points — NOT full implementation code
+- Include code snippets ONLY for: complex reactive/async chains, non-obvious integration patterns, exact DTO field name mappings with external APIs
+- Reference existing codebase patterns by name: "Follow the pattern in XxxService.methodName()"
+- The Builder must READ the target codebase and adapt to its conventions — specs are blueprints, not copy-paste sources
+- Every DTO field that maps to an external API with non-standard naming (PascalCase, snake_case) must specify the exact mapping (e.g., `@JsonProperty("PascalName")` required)
+- Every external API response envelope must be documented (e.g., "Response is wrapped in ApiResponse<T> — unwrap via .getPayload()")
 
 ---
 
@@ -192,6 +203,17 @@ Build in this order:
 ```
 
 ---
+
+### For UI Services — Figma Design Context (MANDATORY)
+Before writing a UI spec:
+1. Ask the human for the Figma URL for the relevant screens
+2. If Figma MCP (`plugin:figma:figma`) is available:
+   - Call `get_screenshot` and `get_design_context` for the relevant nodes
+   - Save screenshots to `context/references/designs/`
+   - Reference Figma node IDs, layout specs, and design tokens in the spec
+3. If Figma MCP is unavailable, ask the human for screenshots
+4. NEVER assume UI layout — always verify against Figma before specifying component structure
+5. Document the exact section placement, icon styles, and interaction patterns from Figma
 
 ### Step 4: Generate TEST-PLAN.md Per Service
 

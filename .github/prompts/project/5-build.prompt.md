@@ -63,6 +63,29 @@ Once the human provides the path:
 2. If the path doesn't exist, create it
 3. NEVER write service code inside this planning repo
 
+### Step 2.5: Branch Hygiene (BEFORE writing any code)
+1. `cd` to the service's local_path
+2. `git fetch origin`
+3. Determine the base branch (usually `develop` or `main`): `git remote show origin | grep 'HEAD branch'`
+4. Create feature branch from latest: `git checkout -b feat/{ticket}-{feature} origin/{base-branch}`
+5. Verify clean state: `git status` must show nothing
+6. ALL work happens on this feature branch — never commit directly to develop/main
+
+### Step 2.7: Analyze Config Repos and Existing Patterns
+Before building:
+1. If `manifest.yaml` lists a config repo for this service, read it to understand:
+   - Environment URLs, secrets, and deployment patterns
+   - K8s manifests (RBAC, volumes, probes, lifecycle hooks)
+2. Check sibling service repos/configs for infrastructure patterns:
+   - If introducing caching → how do other services configure it in K8s? (RBAC, discovery, config files)
+   - If calling HTTPS endpoints → is there a `ca_trust` pattern? (trust configmap, deployment lifecycle hook)
+   - If using a shared library → what version and modules do other services use?
+3. Read the target codebase's existing patterns BEFORE writing new code:
+   - How are WebClients configured? How are DTOs structured? How are tests organized?
+   - Use proper imports — never use fully-qualified inline class names
+   - **If Serena MCP (`plugin:serena:serena`) is available**: Use `get_symbols_overview` to map the codebase structure, `find_symbol` to read specific methods, and `find_referencing_symbols` to trace dependencies. This is 5-10x more context-efficient than reading entire files.
+   - **If Serena is unavailable**: Use Grep for targeted pattern searches and Read with offset/limit for specific sections. Never read a 500-line file when you only need one 30-line method.
+
 ### Step 3: Scaffold the Project
 
 If the service is `new`:
@@ -175,6 +198,34 @@ Also create `services/$SERVICE_NAME/specs/TEST-REPORT.md` following the template
 - Report test case coverage (P0 implemented: N/M, P1 implemented: N/M)
 - List any test cases deferred with reason
 - List any unplanned tests added during implementation (bugs discovered, etc.)
+
+### Step N: Local Verification (MANDATORY)
+After building, verify the code works against real services:
+1. Start the service locally (with appropriate env vars for TST)
+2. Make real API calls to verify data flows end-to-end
+3. Check logs for: proper INFO/ERROR levels, no hidden errors, correct correlation IDs
+4. If any deserialization fails or data is wrong → fix code AND note in BUILD-REPORT.md
+5. For UI services:
+   - Start UI + BFF locally
+   - Use Playwright to test key user journeys
+   - Screenshot key screens and compare with Figma designs
+
+### Step N+1: Code Review (MANDATORY — before PR)
+1. Run code review on all changed files (use pr-review-toolkit:code-reviewer if available)
+2. Check for: silent failures, missing error handling, incorrect serialization, blocking calls
+3. Fix ALL critical and important findings
+4. Re-run build + tests after fixes
+
+### Step N+2: Documentation
+1. If README.md doesn't have a "Local Development" section → add one with: env vars, setup scripts, how to run
+2. If CLAUDE.md doesn't exist in the service repo → recommend creating one
+3. Document any new infrastructure requirements (cache config, RBAC, trust certs)
+
+### Step N+3: Single Commit and PR
+1. `git add -A`
+2. Squash all work into a single commit with descriptive message referencing the ticket
+3. Push feature branch: `git push -u origin feat/{ticket}-{feature}`
+4. Create PR via `gh pr create` with summary, changes list, and test plan
 
 ## Important Rules
 - Follow the SPEC.md religiously — if something is ambiguous, check the contracts

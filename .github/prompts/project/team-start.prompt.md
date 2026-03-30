@@ -95,7 +95,7 @@ Phase 3 Tasks (one per in-scope service):
     Task: "Phase 3: Specify {service-name}"
       owner: lead-engineer
       blockedBy: [architecture-approval]
-      description: "Generate services/{name}/specs/SPEC.md following .claude/commands/3-specify.md instructions. Then generate services/{name}/specs/TEST-PLAN.md following standards/testing-standards.md."
+      description: "Generate services/{name}/specs/SPEC.md following .claude/commands/project/3-specify.md instructions. Then generate services/{name}/specs/TEST-PLAN.md following standards/testing-standards.md."
 
     Task: "Phase 3: Augment Tests for {service-name}"
       owner: qa-security
@@ -116,7 +116,7 @@ Phase 4 Tasks:
   Task: "Phase 4: Contract Generation"
     owner: architect
     blockedBy: [spec-approval]
-    description: "Generate API contracts, event contracts, shared models, CONTRACT-MATRIX.md, and INTEGRATION-TEST-PLAN.md following .claude/commands/4-contract.md."
+    description: "Generate API contracts, event contracts, shared models, CONTRACT-MATRIX.md, and INTEGRATION-TEST-PLAN.md following .claude/commands/project/4-contract.md."
 
   Task: "Phase 4: Contract Review"
     owner: lead-engineer
@@ -135,13 +135,13 @@ Phase 5 Tasks (PARALLEL — this is where teams shine):
       Task: "Phase 5: Build {service-name}"
         owner: lead-engineer
         blockedBy: [contract-approval]
-        description: "Build {service-name} following .claude/commands/5-build.md. Use SPEC.md + TEST-PLAN.md as inputs. Generate BUILD-REPORT.md and TEST-REPORT.md."
+        description: "Build {service-name} following .claude/commands/project/5-build.md. Use SPEC.md + TEST-PLAN.md as inputs. Generate BUILD-REPORT.md and TEST-REPORT.md."
 
     Layer 1+ services — blocked by their dependencies:
       Task: "Phase 5: Build {service-name}"
         owner: lead-engineer
         blockedBy: [build tasks for dependency services]
-        description: "Build {service-name} following .claude/commands/5-build.md."
+        description: "Build {service-name} following .claude/commands/project/5-build.md."
 
   Task: "Phase 5: Infrastructure Setup"
     owner: devops
@@ -157,7 +157,7 @@ Phase 6 Tasks:
   Task: "Phase 6: Cross-Service Validation"
     owner: qa-security
     blockedBy: [all build tasks, infrastructure-setup]
-    description: "Run cross-service validation following .claude/commands/6-validate.md. Use INTEGRATION-TEST-PLAN.md as the test plan. Generate phases/6-validate.md."
+    description: "Run cross-service validation following .claude/commands/project/6-validate.md. Use INTEGRATION-TEST-PLAN.md as the test plan. Generate phases/6-validate.md."
 
   Task: "Phase 6: Validation Support"
     owner: devops
@@ -168,7 +168,7 @@ Phase 7 Tasks:
   Task: "Phase 7: Security & Quality Review"
     owner: qa-security
     blockedBy: [cross-service-validation]
-    description: "Lead code review following .claude/commands/7-review.md. Focus on security, testing, test completeness."
+    description: "Lead code review following .claude/commands/project/7-review.md. Focus on security, testing, test completeness."
 
   Task: "Phase 7: Architecture Review"
     owner: architect
@@ -269,7 +269,7 @@ RESPONSIBILITIES:
 - Phase 6: LEAD cross-service validation — execute INTEGRATION-TEST-PLAN.md scenarios
 - Phase 7: LEAD code review — security checklist, quality scorecard, test completeness
 
-SECURITY CHECKLIST (from .claude/commands/7-review.md):
+SECURITY CHECKLIST (from .claude/commands/project/7-review.md):
 - No hardcoded secrets, input validation, SQL injection prevention, XSS prevention
 - Auth on all non-public endpoints, authorization checks, rate limiting, CORS
 - No sensitive data in logs, no known critical vulnerabilities in dependencies
@@ -381,3 +381,25 @@ Display team startup summary:
 - NEVER write service code inside this planning repo — use `local_path` from manifest
 - When agents disagree, mediate based on project priorities and standards
 - If the human provides input, relay relevant decisions to affected agents immediately
+
+## Context Efficiency Rules
+
+Agent teams consume significant context. Follow these rules to prevent context exhaustion:
+
+### Context Budget
+Every agent MUST follow the **Context Budget by Phase** matrix in CLAUDE.md — it specifies exactly which files and backend standard sections each role should read. The `backend-system-design-standard.md` is 2,454 lines — NEVER read the whole thing; use the section index in CLAUDE.md with offset/limit.
+
+### Smart Code Navigation (Serena MCP)
+See CLAUDE.md "Smart Codebase Navigation" section. When `plugin:serena:serena` is available, prefer `get_symbols_overview`, `find_symbol`, and `find_referencing_symbols` over reading entire files. When unavailable, use Grep with narrow patterns and Read with offset/limit.
+
+### Context Budget Monitoring
+- When context exceeds 70%, the agent MUST report to team-lead with handoff notes
+- Handoff notes are MANDATORY: list exact files read, line numbers of key code, findings, and remaining work
+- Team-lead spawns fresh agent with handoff notes — no context is wasted re-reading
+
+### Spec Verification Loop
+After the build phase, team-lead MUST verify:
+1. Every acceptance criterion from the ticket has a corresponding test
+2. Every external API integration has been tested against real responses (not just mocks)
+3. Every spec requirement is implemented — cross-reference SPEC.md sections against built code
+4. If gaps found → assign to the appropriate agent (not always the builder — architect may need to revise specs)

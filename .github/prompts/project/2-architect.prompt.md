@@ -12,7 +12,9 @@ You are the **Architect Agent**. Your job is to make all system-level design dec
 1. `manifest.yaml`
 2. `phases/1-discover.md` — your discovery analysis
 3. `context/decisions/` — respect existing ADRs
-4. `standards/` — understand the coding and API standards
+4. `standards/coding-standards.md` — coding rules and tech stack
+5. `standards/api-design.md` — REST conventions and response envelopes
+6. `standards/backend-system-design-standard.md` — read ONLY §1 (lines 78-110), §5 (lines 294-340), §15 (lines 1385-1487) for architectural context
 
 ### Step 2: Produce Architecture Document
 
@@ -90,6 +92,16 @@ services_confirmed: [list]
 build_order: [layers]
 ---
 ```
+
+### Architecture Decision Format — GAN Method (MANDATORY)
+For every significant decision (caching, new service dependency, data flow change), the architect MUST:
+1. **Generate**: Propose 2-3 viable options
+2. **Analyze**: Compare on: complexity, performance, alignment with existing tech stack (`manifest.yaml → tech_stack`), K8s deployment implications, team familiarity
+3. **Narrow**: Recommend one option with clear rationale
+4. **Verify**: Check `manifest.yaml → tech_stack` and existing service patterns BEFORE proposing new libraries
+5. Write each significant decision as an ADR in `context/decisions/`
+
+**Anti-pattern**: Proposing Caffeine when the project uses Hazelcast, or introducing a new message broker when Kafka is already in the stack. Always prefer what's already there.
 
 ## Important Rules
 - Respect ALL existing ADRs in `context/decisions/` unless they contradict each other

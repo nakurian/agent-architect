@@ -5,26 +5,55 @@ All agents must follow these standards when creating test plans, writing tests, 
 ## Test Pyramid
 
 Target ratio (adjust per project via ADR):
-- **70% Unit tests** — fast, isolated, test single functions/methods
-- **20% Integration tests** — test module interactions, real database, real HTTP
-- **10% E2E / Contract tests** — cross-service flows, Pact contract verification
+- **60% Unit tests** — fast, isolated, test single functions/methods (DAO, utilities, serializers, validators)
+- **30% Service tests** — business logic, reactive chains, error handling (Mockito + StepVerifier)
+- **10% Integration / E2E / Contract tests** — controller + validation + response shape, cross-service flows, Pact contract verification
+
+## Framework Stack (Backend — Java)
+
+| Tool | Purpose |
+|------|---------|
+| JUnit 5 | Test runner, `@Nested`, `@DisplayName`, `@ParameterizedTest` |
+| Mockito | Mocking: `@Mock`, `@InjectMocks`, `when/thenReturn`, `verify` |
+| StepVerifier | Reactive assertions for `Mono`/`Flux` |
+| WebTestClient | Integration testing for WebFlux controllers |
+| AssertJ | Fluent assertions (`assertThat(x).isEqualTo(y)`) |
 
 ## Naming Conventions
 
-### Test Files
+### Test Files (Backend — Java)
+- Unit tests: `{ClassName}Test.java` (mirrors source package)
+- Controller tests: `{ClassName}Test.java` with `@WebFluxTest`
+- Service tests: `{ClassName}Test.java` with `@ExtendWith(MockitoExtension.class)`
+
+### Test Files (Frontend — TypeScript)
 - Unit tests: `<module>.spec.ts` (co-located with source)
 - Integration tests: `<module>.integration.spec.ts` or in `test/` directory
 - E2E tests: `test/e2e/<feature>.e2e.spec.ts`
 - Contract tests: `test/contract/<consumer>-<provider>.pact.spec.ts`
 
-### Test Names
+### Test Names (Backend — Java)
+Use the pattern: `methodName_condition_expectedResult`
+```java
+@ExtendWith(MockitoExtension.class)
+class OrderServiceTest {
+
+    @Nested
+    class SaveOrder {
+        @Test void saveOrder_success() {}
+        @Test void saveOrder_invalidStartDate_throwsBadRequest() {}
+        @Test void saveOrder_notFound_returnsEmpty() {}
+    }
+}
+```
+
+### Test Names (Frontend — TypeScript)
 Use the pattern: `should <expected behavior> when <condition>`
 ```typescript
 describe('OrderService', () => {
   describe('createOrder', () => {
     it('should create order with status PENDING when valid input provided', () => {});
-    it('should throw ValidationError when amount is negative', () => {});
-    it('should publish order.created event when order is persisted', () => {});
+    it('should throw ValidationError when startDate is invalid', () => {});
   });
 });
 ```
@@ -73,6 +102,107 @@ export const createOrderInput = (overrides?: Partial<CreateOrderDto>) => ({
 - Mock external HTTP services at the network level (e.g., `nock`, `msw`) — not at the import level
 - Mock message broker in unit tests; use real broker in integration tests
 - Never mock the database in integration tests — use a real database instance
+
+## Backend Test Patterns (Java / Spring Boot)
+
+### Controller Test Pattern
+```java
+@WebFluxTest(OrderController.class)
+@Import(TestConfig.class)
+class OrderControllerTest {
+
+    @Autowired private WebTestClient webTestClient;
+    @MockBean private OrderService orderService;
+
+    @Test
+    void getOrder_success() {
+        var response = OrderResponse.builder()
+            .orderId("ORD-001")
+            .build();
+
+        when(orderService.getOrder("ORD-001")).thenReturn(Mono.just(response));
+
+        webTestClient.get()
+            .uri("/api/orders/ORD-001")
+            .exchange()
+            .expectStatus().isOk()
+            .expectBody(new ParameterizedTypeReference<ApiResponse<OrderResponse>>() {})
+            .consumeWith(result -> {
+                var body = result.getResponseBody();
+                assertThat(body.getPayload().getOrderId()).isEqualTo("ORD-001");
+            });
+    }
+}
+```
+
+### Service Test Pattern
+```java
+@ExtendWith(MockitoExtension.class)
+class OrderServiceTest {
+
+    @Mock private OrderDAO orderDAO;
+    @InjectMocks private OrderService orderService;
+
+    @Test
+    void getOrder_success() {
+        var order = TestUtils.buildOrder("ORD-001");
+        when(orderDAO.findById("ORD-001")).thenReturn(Mono.just(order));
+
+        StepVerifier.create(orderService.getOrder("ORD-001"))
+            .assertNext(response -> {
+                assertThat(response.getOrderId()).isEqualTo("ORD-001");
+            })
+            .verifyComplete();
+    }
+
+    @Test
+    void getOrder_notFound_returnsEmpty() {
+        when(orderDAO.findById("ORD-001")).thenReturn(Mono.empty());
+
+        StepVerifier.create(orderService.getOrder("ORD-001"))
+            .verifyComplete();
+    }
+}
+```
+
+### Test Utilities
+Create a shared `TestUtils` class per service:
+```java
+public final class TestUtils {
+    private TestUtils() {}
+
+    public static Order buildOrder(String orderId) {
+        return Order.builder()
+            .orderId(orderId)
+            .startDate("20260318")
+            .customerName("Test Customer")
+            .status("PENDING")
+            .build();
+    }
+}
+```
+
+### Coverage Requirements (Backend)
+- **Minimum 80%** instruction coverage (JaCoCo)
+- **Minimum 80%** branch coverage (JaCoCo)
+- **Excluded from coverage**: annotations, config, DTOs, exceptions, persistence models, serializers, App.class
+
+```kotlin
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                counter = "INSTRUCTION"
+                minimum = "0.80".toBigDecimal()
+            }
+            limit {
+                counter = "BRANCH"
+                minimum = "0.80".toBigDecimal()
+            }
+        }
+    }
+}
+```
 
 ## Systematic Edge Case Checklist
 

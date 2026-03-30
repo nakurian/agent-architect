@@ -36,25 +36,30 @@ framework:
 # ---------------------------------------------------------------------------
 tech_stack:
   languages:
-    backend: "TypeScript"          # or Java, Go, Python, etc.
+    backend: "Java 21"
     frontend: "TypeScript"
-  backend_framework: "NestJS"      # or Express, Spring Boot, FastAPI, etc.
-  frontend_framework: "Next.js"    # or React, Angular, Vue, etc.
-  database: "PostgreSQL"           # or MongoDB, DynamoDB, etc.
-  cache: "Redis"                   # optional
-  message_broker: "RabbitMQ"       # optional — for async events between services
-  api_style: "REST"                # REST, GraphQL, gRPC
+  backend_framework: "Spring Boot 3.4+ (WebFlux / Netty)"
+  frontend_framework: "Next.js / React 18+ / MUI 6"
+  database: "Couchbase"
+  cache: "Hazelcast"
+  message_broker: "Kafka"
+  api_style: "REST"
+  shared_library: ""              # e.g., "com.example.platform:starter-common-web"
+  build_tool: "Gradle (Kotlin DSL)"
   container: "Docker"
   ci_cd: "GitHub Actions"
   testing:
-    unit: "Jest"
-    integration: "Jest + Supertest"
+    unit: "JUnit 5 + Mockito + StepVerifier"
+    integration: "WebTestClient (@WebFluxTest)"
     e2e: "Playwright"
-    contract: "Pact"               # for cross-service contract testing
+    contract: "Pact"
+    coverage: "JaCoCo (80% minimum)"
+    quality: "Spotless + Checkstyle (Google style, 0 violations)"
   observability:
-    logging: "structured JSON"
-    tracing: "OpenTelemetry"
-    monitoring: "Prometheus + Grafana"  # optional
+    logging: "SLF4J + Log4j2 (structured JSON)"
+    tracing: "Micrometer Brave (traceId/spanId)"
+    monitoring: "Prometheus + Grafana"
+    health: "/adm/actuator/health (liveness + readiness + startup)"
 
 # ---------------------------------------------------------------------------
 # SERVICES — Define every service in the system
@@ -76,25 +81,25 @@ tech_stack:
 services:
 
   # --- Example: Frontend ---
-  - name: "web-ui"
+  - name: "admin-ui"
     type: "ui"
     status: "new"                  # change to: new | existing | enrich | skip
-    description: "Customer-facing web application"
+    description: "Backoffice administration application"
     owner: ""                      # team or person responsible (e.g., "frontend-team", "@john")
-    repo: ""                       # git URL — for clone/push (e.g., github.com/org/web-ui)
+    repo: ""                       # git URL — for clone/push (e.g., github.com/org/admin-ui)
     local_path: ""                 # where the code lives on disk — builder asks if empty
     port: 3000
     database: null                 # null = no database for this service
     depends_on:
-      - "bff-gateway"
+      - "api-gateway"
     owns_events: []                # events this service publishes
     notes: ""
 
   # --- Example: BFF ---
-  - name: "bff-gateway"
+  - name: "api-gateway"
     type: "bff"
     status: "new"
-    description: "Backend-for-frontend aggregating domain APIs"
+    description: "Backend-for-frontend aggregating domain APIs for admin UI"
     owner: ""
     repo: ""
     local_path: ""
@@ -102,7 +107,7 @@ services:
     database: null                 # BFF typically has no database
     depends_on:
       - "order-service"
-      - "payment-service"
+      - "user-service"
     owns_events: []
     notes: ""
 
@@ -110,66 +115,34 @@ services:
   - name: "order-service"
     type: "domain"
     status: "new"
-    description: "Manages order lifecycle"
+    description: "Manages orders and transactions"
     owner: ""
     repo: ""
     local_path: ""
     port: 5001
-    database: "PostgreSQL"         # override per service, or null to use tech_stack default
+    database: null                 # null = uses tech_stack default (Couchbase)
     depends_on: []
     owns_events:
       - "order.created"
       - "order.updated"
-      - "order.cancelled"
     notes: ""
 
   # --- Example: Existing Service (already has a repo) ---
-  - name: "payment-service"
+  - name: "user-service"
     type: "domain"
     status: "existing"
-    description: "Handles payment processing"
+    description: "Manages user profiles and preferences"
     owner: ""
-    repo: "https://github.com/your-org/payment-service"
+    repo: "https://github.com/your-org/user-service"
     local_path: ""                 # builder will ask where to clone, or set path if already cloned
     port: 5002
-    database: "PostgreSQL"
+    database: null                 # null = uses tech_stack default (Couchbase)
     depends_on:
       - "order-service"            # listens to order events
     owns_events:
-      - "payment.completed"
-      - "payment.failed"
+      - "user.created"
+      - "user.updated"
     notes: "Already in production. API spec in references/existing-apis/"
-
-  # --- Agent Architect UI ---
-  - name: "agent-architect-ui"
-    type: "ui"
-    status: "new"
-    description: "Visual orchestration UI for Agent Architect — dashboard, manifest editor, spec browser, review gate"
-    owner: ""
-    repo: ""
-    local_path: ""
-    port: 3001
-    database: null
-    depends_on:
-      - "agent-orchestration-bff"
-    owns_events: []
-    notes: "Next.js 15 / TypeScript. See standards/ui-architecture.md for patterns."
-
-  # --- Agent Orchestration BFF ---
-  - name: "agent-orchestration-bff"
-    type: "bff"
-    status: "new"
-    description: "Backend-for-frontend serving the agent-architect-ui — reads/writes planning repo filesystem"
-    owner: ""
-    repo: ""
-    local_path: ""
-    port: 4001
-    database: null
-    depends_on: []
-    owns_events:
-      - "approval.granted"
-      - "sse:file-change"
-    notes: "Reads manifest.yaml, services/, contracts/, phases/ from planning repo filesystem. Streams file changes to UI via SSE."
 
 # ---------------------------------------------------------------------------
 # ENVIRONMENTS — Where services run

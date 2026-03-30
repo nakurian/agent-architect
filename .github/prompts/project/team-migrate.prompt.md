@@ -38,7 +38,7 @@ Build a list of completed phases and determine the next phase to run.
 
 ### Step 3: Check for Customizations
 
-Read each `.claude/commands/*.md` file and check if it differs from the template defaults. Look for these marker strings to detect unmodified files:
+Read each `.claude/commands/project/*.md` file and check if it differs from the template defaults. Look for these marker strings to detect unmodified files:
 
 - `0-setup.md`: "You are the **Setup Agent**"
 - `1-discover.md`: "You are the **Discovery Agent**"

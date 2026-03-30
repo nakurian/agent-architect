@@ -1,101 +1,197 @@
 # UI Architecture Standards
 
-These standards apply to any UI built on top of the Agent Architect planning framework.
+These standards apply to all frontend applications built through this framework.
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Framework | Next.js / React 18+ / TypeScript (strict mode) |
+| Component Library | MUI 6 (Material UI) |
+| Styling | Tailwind CSS 3 + MUI theme |
+| Server State | React Query (TanStack Query) |
+| Forms | React Hook Form + Zod validation |
+| Tables | MUI DataGrid or AG Grid |
+| Routing | Next.js App Router |
+| Auth | OAuth2 / SSO |
+| Component Dev | Storybook |
 
 ## Layered Architecture
 
-All UIs must follow this layered architecture:
-
 ```
-┌─────────────────────────────────────────────────────┐
-│              agent-architect-ui (Frontend)            │
-├─────────────┬───────────────┬───────────────────────┤
-│  Dashboard  │  Spec Viewer  │  Review & Approval    │
-│  & Phases   │  & Editor     │  Workflow              │
-└──────┬──────┴───────┬───────┴───────────┬───────────┘
-       │              │                   │
-       ▼              ▼                   ▼
-┌─────────────────────────────────────────────────────┐
-│         agent-orchestration-bff (Service)             │
-├─────────────────────────────────────────────────────┤
-│  ┌──────────┐ ┌──────────┐ ┌──────────────────┐    │
-│  │ Manifest │ │ Phase    │ │ Approval          │    │
-│  │ Parser   │ │ Reader   │ │ Manager           │    │
-│  └──────────┘ └──────────┘ └──────────────────┘    │
-│  ┌──────────────────┐ ┌────────────────────────┐   │
-│  │ File Watcher     │ │ SSE Stream Server      │   │
-│  │ (chokidar)       │ │                        │   │
-│  └──────────────────┘ └────────────────────────┘   │
-├─────────────────────────────────────────────────────┤
-│              File System (planning repo)              │
-│  manifest.yaml │ services/ │ contracts/ │ phases/    │
-└─────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│              {app-name} (Next.js)                        │
+├──────────┬──────────┬──────────┬──────────┬─────────────┤
+│ Feature  │ Feature  │ Feature  │ Feature  │  Feature    │
+│    A     │    B     │    C     │    D     │     E       │
+└────┬─────┴────┬─────┴────┬─────┴────┬─────┴──────┬──────┘
+     │          │          │          │            │
+     ▼          ▼          ▼          ▼            ▼
+┌─────────────────────────────────────────────────────────┐
+│              React Query (Server State Layer)             │
+│  useFeatureA │ useFeatureB │ useFeatureC │ ...          │
+├─────────────────────────────────────────────────────────┤
+│              API Client (Axios / Fetch)                   │
+│  {domain}Api.ts — typed client for all endpoints         │
+├─────────────────────────────────────────────────────────┤
+│              Backend Service (REST API)                   │
+│  /api/{resources}                                        │
+└─────────────────────────────────────────────────────────┘
 ```
 
-## BFF Layer Pattern
+The UI communicates with backend services via REST APIs. Use a BFF layer only when the backend does not provide the exact data shapes the UI needs; otherwise communicate directly with the domain service.
 
-The UI communicates with the planning repo exclusively through a dedicated BFF service (`agent-orchestration-bff`). The BFF is a **separate service** — not embedded API routes inside the UI. Direct filesystem access from the client is not permitted.
-
-The BFF owns:
-- Reading/writing `manifest.yaml` and planning repo files
-- Serving specs, contracts, and phase status to the UI
-- Managing the approval workflow (approvals.json)
-- Watching the filesystem for changes and streaming updates via SSE
-
-### Required BFF Endpoints
+## Project Structure
 
 ```
-/api/v1/manifest              — Read/write manifest.yaml
-/api/v1/phases/:phase         — Phase status (read from phases/ directory)
-/api/v1/services/:name        — Service specs and status
-/api/v1/contracts             — Contract browser
-/api/v1/approvals             — Review gate workflow
-/api/v1/events/stream         — SSE endpoint for real-time file change updates
+src/
+├── app/                               # Next.js App Router
+│   ├── layout.tsx                     # Root layout with AppShell
+│   ├── page.tsx                       # Default page / redirect
+│   ├── {feature-a}/                   # Route per feature
+│   │   └── page.tsx
+│   ├── {feature-b}/
+│   │   └── page.tsx
+│   └── {feature-n}/
+│       └── page.tsx
+│
+├── features/                          # Feature-based modules
+│   ├── {feature-a}/
+│   │   ├── {FeatureA}Page.tsx         # Page-level component
+│   │   ├── {SubComponent}.tsx         # Feature-specific components
+│   │   ├── {AnotherComponent}.tsx
+│   │   └── hooks/
+│   │       ├── use{FeatureA}.ts       # React Query: GET /api/{resources}
+│   │       ├── useCreate{Resource}.ts
+│   │       └── useUpdate{Resource}.ts
+│   │
+│   ├── {feature-b}/
+│   │   ├── {FeatureB}Page.tsx
+│   │   ├── {SubComponent}.tsx
+│   │   └── hooks/
+│   │       └── use{FeatureB}.ts
+│   │
+│   └── {feature-n}/
+│       ├── {FeatureN}Page.tsx
+│       └── hooks/
+│           └── use{FeatureN}.ts
+│
+├── shared/
+│   ├── components/
+│   │   ├── AppShell.tsx               # Nav sidebar + header + content area
+│   │   ├── NavSidebar.tsx             # Left nav with screen links
+│   │   ├── ConfirmDialog.tsx          # Destructive action confirmation
+│   │   └── DataTable.tsx              # Wrapper around MUI DataGrid
+│   ├── api/
+│   │   └── {domain}Api.ts            # Typed API client for all endpoints
+│   ├── hooks/
+│   │   └── useAuth.ts                # Auth context hook
+│   └── types/
+│       └── {domain}.ts               # TypeScript types matching API contracts
+│
+└── styles/
+    └── theme.ts                      # MUI theme + Tailwind integration
 ```
 
-### Manifest as State
+## State Management
 
-The `manifest.yaml` is the single source of truth. The BFF reads it for all state — no separate database is needed initially. For approval workflows and audit trails, extend with a lightweight `approvals.json` alongside the manifest.
+### Server State — React Query (TanStack Query)
 
-## Real-Time Updates via File Watchers
+All data from backend services is managed via React Query. No Redux, no Context for server state.
 
-Use `chokidar` to watch the planning repo for changes and push updates to the UI via SSE:
+| Pattern | Implementation |
+|---------|---------------|
+| **Polling** | Configurable `refetchInterval` for near-real-time data updates |
+| **Optimistic updates** | Toggle/update operations update UI immediately, roll back on error |
+| **Cache invalidation** | Mutations invalidate related queries |
+| **Stale-while-revalidate** | Show cached data immediately, refetch in background |
+| **Error retry** | 3 retries with exponential backoff for transient failures |
 
-- Watch for: specs generated, phases completed, contracts extracted, manifest changes
-- SSE is preferred over WebSocket for file-change events (simpler, sufficient for this use case)
-- Debounce filesystem events (200ms) to avoid flooding the client during agent writes
+### Local State
 
-## UI Template Integration
+Minimal — only for UI-specific state:
+- Active filters and sort order
+- Modal open/close state
+- Selected table rows (for bulk operations)
+- Form field values (via React Hook Form)
 
-If scaffolding from an existing UI template or component library, map its features to Agent Architect concerns:
+## API Client
 
-| UI Concern | How It Maps |
+Single typed API client per domain in `shared/api/{domain}Api.ts`:
+
+```typescript
+// All endpoints typed, returns typed responses
+const domainApi = {
+  // List resources
+  getResources: (params: ResourceParams) => ...,
+
+  // CRUD operations
+  getResource: (id: string) => ...,
+  createResource: (data: CreateResourceRequest) => ...,
+  updateResource: (id: string, data: UpdateResourceRequest) => ...,
+  deleteResource: (id: string) => ...,
+
+  // Batch operations
+  batchGetResources: (ids: string[]) => ...,
+
+  // Sub-resources
+  getSubResources: (parentId: string, params: PaginationParams) => ...,
+};
+```
+
+- Use Zod schemas for runtime validation of API responses
+- Include `traceId` from `ApiResponse` in error logging
+- Handle `ApiResponse<T>` envelope: extract `payload`, check `status`, surface `errors`
+
+## UI Component Mapping
+
+| UI Concern | Standard Approach |
 |---|---|
-| Sidebar nav | Phase-based navigation (Discover → Architect → Specify → Contract → Build → Validate → Review) |
-| Auth context | Optional — useful if deploying as shared team tool with an SSO/OAuth provider |
-| State management | Manifest state, phase status, active service tracking |
-| Feature flags | Toggle advanced features (auto-approve, etc.) |
-| Data tables | Service list, contract browser, quality scorecard |
-| Forms | Manifest editor, approval forms |
-| Dark mode | Recommended — support light and dark themes |
-| Component docs (Storybook, etc.) | Document new agent-architect-specific components |
-| Loading/Error states | Feedback for BFF requests and SSE connection status |
-| HTTP client interceptors | BFF API calls with consistent error handling |
+| Sidebar nav | Screen-based navigation matching feature routes |
+| Auth context | OAuth2 / SSO — consistent auth provider across applications |
+| State management | React Query for server state, minimal local state |
+| Data tables | MUI DataGrid — sortable, filterable, paginated |
+| Forms | React Hook Form + Zod — create/edit modals, settings |
+| Charts / progress | Custom components as needed (progress bars, status indicators) |
+| Loading states | React Query loading/error states, skeleton components |
+| Error handling | Toast notifications for mutations, inline error messages for forms |
+| Dark mode | Support both themes via MUI theme provider |
+| Storybook | Document all shared components |
+| Deep links | URL encodes key context (e.g., entity + date + screen) for bookmarking and sharing |
 
-## Markdown Rendering
+## Key UI Behaviors
 
-Specs and contracts are markdown files rendered in-browser:
+| Behavior | Implementation |
+|----------|---------------|
+| **Real-time data updates** | React Query with configurable polling interval |
+| **Optimistic updates** | Toggle/status operations update UI immediately, roll back on error |
+| **Bulk operations** | Table supports multi-select for bulk actions |
+| **Audit trail** | All manual actions logged with user identity and timestamp |
+| **Role-based access** | VIEWER (read-only), OPERATOR (manage), ADMIN (settings + overrides) |
+| **Confirmation dialogs** | All destructive or override actions require confirmation |
+| **Deep links** | URL encodes key parameters for bookmarking and sharing |
+| **Export** | CSV and PDF export from list/table views |
 
-- Use `react-markdown` + `remark-gfm` for GitHub-flavored markdown
-- Add Mermaid plugin for architecture diagrams embedded in specs
-- Support inline commenting for spec review workflows
+## MUI + Tailwind Integration
+
+MUI provides the component library (DataGrid, dialogs, selectors, form controls). Tailwind handles utility styling and layout.
+
+- Use MUI's `ThemeProvider` for consistent theming across components
+- Use Tailwind for spacing, layout, and responsive utilities
+- Avoid conflicting styles — use MUI's `sx` prop for component-specific overrides, Tailwind for layout
+- Configure Tailwind's `important` selector to avoid specificity conflicts with MUI
 
 ## Repository Separation
 
-Both the UI and the BFF are **separate repositories** from the planning repo. Neither lives inside the planning repo — this keeps it clean as a specification-only workspace.
+UIs are **separate repositories** from both the planning repo and the service repo:
 
-- `agent-architect-ui` — Frontend. Talks only to the BFF, never to the filesystem directly.
-- `agent-orchestration-bff` — Backend service. Owns all filesystem I/O.
-- Planning repo — The workspace the BFF reads/writes. Contains manifest, specs, contracts, phases.
+- `{project}-{domain}-ui` — Admin UI (Next.js). Talks to the backend service REST API.
+- `{project}-{domain}-service` — Backend service (Java/Spring Boot). Owns all business logic and data.
+- `{project}-{domain}-context` — Planning repo. Contains specs, standards, contracts (no code).
 
-Both services are registered in the planning repo's `manifest.yaml` so agents can discover and build them.
+## Testing
+
+- **Unit tests**: Utility functions, hooks (with `renderHook`), Zod schemas
+- **Component tests**: React Testing Library — render components with mocked React Query responses
+- **Storybook**: Visual documentation for shared components
+- **E2E**: Playwright for critical user journeys
