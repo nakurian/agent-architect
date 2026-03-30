@@ -166,6 +166,12 @@ Transition is non-destructive — `/project:team-start` detects existing progres
 │  Phase 7: /project:7-review       → Security, quality & test    │
 │                                      completeness review         │
 ├─────────────────────────────────────────────────────────────────┤
+│  TICKET-DRIVEN (Jira integration):                               │
+│  /project:feature GS-123          → Jira ticket → context →     │
+│                                      phases → track everywhere   │
+│  /project:bugfix GS-456           → Bug ticket → diagnose →     │
+│                                      fix → regression test → PR  │
+├─────────────────────────────────────────────────────────────────┤
 │  TEAM MODE (optional):                                           │
 │  /project:team-start              → Spawn 5-agent team that      │
 │                                      auto-orchestrates Phases 1-7│
@@ -265,6 +271,13 @@ The framework works with Copilot out of the box:
 ./scripts/sync-prompts.sh
 ```
 
+### Working from a Jira ticket
+```bash
+/project:feature GS-123       # Reads ticket, determines services, runs phases
+/project:bugfix GS-456        # Reads bug, diagnoses, fixes, creates PR
+```
+The agent reads the Jira ticket via Atlassian MCP, determines which services are affected, updates context, and drives the appropriate phases. The Jira key is tracked in branch names, commits, specs, test case IDs, and PRs. If Atlassian MCP isn't available, you can paste ticket details manually.
+
 ### Enriching existing services
 1. Set service status to `enrich` in manifest
 2. Put the existing API spec in `services/<name>/references/`
@@ -287,11 +300,19 @@ The framework works with Copilot out of the box:
 /project:retrospective              Post-iteration self-improvement
 ```
 
+### Ticket-Driven Commands (Jira Integration)
+```
+/project:feature GS-123             Read Jira ticket, update context, run phases, track everywhere
+/project:feature GS-123 --team      Same + spawn agent team for multi-service features
+/project:bugfix GS-456              Read bug ticket, diagnose, fix, regression test, PR
+```
+
 ### Utility Commands
 ```
 /project:status                     Progress dashboard
 /project:add-service <name> <type>  Scaffold a new service folder
 /project:rebuild-service <name>     Rebuild after changes
+/project:retrospective              Post-iteration self-improvement
 ```
 
 ### Team Commands

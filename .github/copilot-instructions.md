@@ -61,13 +61,34 @@ When introducing new infrastructure (cache, message broker, external service):
 - Ensure K8s manifests include required RBAC, volume mounts, and lifecycle hooks
 - Document new environment variables in README
 
-### Smart Codebase Navigation — Serena MCP
-When `plugin:serena:serena` MCP is available, agents MUST prefer it over reading entire files:
+### Agent Startup Protocol — Serena MCP
+
+Every agent MUST run this check at the start of every phase/command **before doing any other work**:
+
+1. **Detect Serena**: Check if `plugin:serena:serena` MCP tools are available
+2. **If available — initialize**:
+   - Call `check_onboarding_performed` to see if the project is already set up
+   - If not onboarded: call `activate_project` with the target codebase path, then call `onboarding`
+   - If already onboarded: call `activate_project` with the target codebase path (re-activation is fast)
+   - Confirm Serena is ready before proceeding
+3. **If NOT available — note it and continue**: Log that Serena is unavailable and use fallback navigation (below)
+
+**Which codebase to activate?**
+- Phases 0–4 (planning phases): activate this planning repo's path
+- Phase 5 (build), bugfix, rebuild-service: activate the **service's `local_path`** (the actual code repo)
+- Phase 6–7 (validate, review): activate each service repo as you review it
+- Feature command: activate the planning repo first, then re-activate each service repo during build steps
+
+### Smart Codebase Navigation — Using Serena
+
+Once initialized, agents MUST prefer Serena over reading entire files:
 - Use `get_symbols_overview` to understand file structure before reading code
 - Use `find_symbol` to locate specific classes, methods, or fields by name
 - Use `find_referencing_symbols` to trace where a symbol is used across the codebase
 - Only use `read_file` or `find_symbol` with body when you need the actual implementation
 - This dramatically reduces context usage — read 20 lines of a method body instead of 500 lines of a full file
+
+### Fallback Navigation — When Serena is NOT Available
 
 When Serena is NOT available, be creative with context:
 - Use `Grep` to find specific patterns instead of reading whole files
@@ -89,6 +110,8 @@ Agents MUST read ONLY the files listed for their current phase. Do NOT read the 
 | 5-build | (already explicit in 5-build.md) | Sections referenced by SPEC.md — use offset/limit |
 | 6-validate | `manifest.yaml`, `contracts/*`, all `BUILD-REPORT.md` + `TEST-REPORT.md` | None |
 | 7-review | Built code, `TEST-REPORT.md` files | §16, §20–23 (errors, observability, security, testing, quality) |
+| feature | `manifest.yaml`, `manifest.local.yaml`, `services/*/CONTEXT.md`, `services/*/specs/SPEC.md`, `context/PROJECT.md`, relevant `contracts/` | Sections referenced by SPEC.md — use offset/limit |
+| bugfix | `manifest.yaml`, `manifest.local.yaml`, `services/<name>/specs/SPEC.md`, `services/<name>/specs/BUILD-REPORT.md`, `services/<name>/specs/TEST-REPORT.md` | Sections referenced by SPEC.md — use offset/limit |
 
 ### Reading `backend-system-design-standard.md` Efficiently
 
@@ -141,6 +164,16 @@ Run phases in order using slash commands:
 /project:retrospective    → Post-iteration self-improvement (context, avoidances, gaps)
 ```
 
+### Ticket-Driven Commands (Jira Integration)
+
+```
+/project:feature <JIRA-KEY>           → Read Jira ticket → update context → run phases → track everywhere
+/project:feature <JIRA-KEY> --team    → Same as above but spawns agent team for multi-service features
+/project:bugfix <JIRA-KEY>            → Read bug ticket → diagnose → fix → regression test → PR
+```
+
+These commands use the Atlassian MCP to read Jira tickets and inject the ticket key into all outputs (branches, commits, specs, test case IDs, PRs, reports). If Atlassian MCP is unavailable, they fall back to manual input.
+
 ### Team Orchestration Commands
 
 ```
@@ -172,6 +205,7 @@ This applies to: project setup, build paths, service configuration, standards, a
 
 ## Rules for All Agents
 
+- ALWAYS run the **Agent Startup Protocol** first — check for Serena MCP and initialize if available (see "Agent Startup Protocol" section above)
 - ALWAYS read `manifest.yaml` first — it drives everything
 - NEVER modify files in `context/references/` — that's human-provided input
 - `context/PROJECT.md` can be written by the setup agent (Phase 0) and read by all other agents

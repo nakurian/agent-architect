@@ -38,6 +38,7 @@ These are the planned improvements, roughly prioritized. Pick one and contribute
 | [#4](https://github.com/your-org/agent-architect/issues/4) | **Monorepo support** — alternative layout with workspace-based tooling | Open |
 | [#7](https://github.com/your-org/agent-architect/issues/7) | **Tech-stack templates** — pre-built standards for Spring Boot, FastAPI, Go, etc. | Open |
 | [#10](https://github.com/your-org/agent-architect/issues/10) | **Agent team orchestration** — multi-agent team mode with specialized roles | **Done** — `/project:team-start` with 5-agent team |
+| [#11](https://github.com/your-org/agent-architect/issues/11) | **Ticket-driven workflows** — Jira integration for features and bugfixes | **Done** — `/project:feature` + `/project:bugfix` with Atlassian MCP |
 
 ### Nice to Have
 

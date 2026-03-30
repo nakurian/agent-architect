@@ -356,6 +356,51 @@ claude -p "/project:5-build bff-gateway"
 
 ## Common Workflows
 
+### Working from a Jira ticket (feature or bug)
+
+The fastest way to go from ticket to code:
+
+```bash
+# Feature work — reads ticket, determines scope, runs phases
+/project:feature GS-123
+
+# Bug fix — reads ticket, diagnoses, fixes, creates PR
+/project:bugfix GS-456
+```
+
+**What the feature agent does:**
+1. Reads the Jira ticket (summary, description, acceptance criteria, priority)
+2. Determines which services are affected (analyzes ticket + manifest)
+3. Asks you to confirm the scope
+4. Registers the ticket in `manifest.yaml` under `active_tickets`
+5. Updates service CONTEXT.md files with the ticket details
+6. Determines which phases to run (full pipeline for new services, incremental for existing)
+7. Runs phases with the Jira key injected everywhere:
+   - Branch: `feat/GS-123-guest-entitlements`
+   - Commits: `feat(GS-123): add entitlement endpoint`
+   - Test IDs: `TC-GUEST-GS123-001`
+   - BUILD-REPORT.md: acceptance criteria status
+8. Comments on the Jira ticket with build status and PR link
+9. Optionally transitions the ticket (asks you first)
+
+**What the bugfix agent does:**
+1. Reads the bug ticket (steps to reproduce, expected vs actual, stack trace)
+2. Identifies the affected service
+3. Diagnoses the root cause — presents analysis for your confirmation
+4. Creates `fix/GS-456-...` branch
+5. Applies surgical fix + mandatory regression test
+6. Verifies fix (tests + local)
+7. Creates PR, comments on Jira
+
+**For multi-service features:**
+```bash
+/project:feature GS-123 --team    # Spawns agent team for complex features
+```
+
+**If Atlassian MCP isn't available:** Both commands fall back to manual input — you paste the ticket details and continue normally.
+
+---
+
 ### Adding a new service mid-project
 
 ```bash
@@ -459,10 +504,16 @@ All phases are slash commands prefixed with `/project:`:
 /project:6-validate                 # Cross-service validation
 /project:7-review                   # Quality + test completeness review
 
+# Ticket-driven commands (Jira integration)
+/project:feature GS-123             # Jira ticket → context → phases → track
+/project:feature GS-123 --team      # Same + spawn agent team
+/project:bugfix GS-456              # Bug ticket → diagnose → fix → PR
+
 # Utility commands
 /project:status                     # Progress dashboard
 /project:add-service name type      # Add new service
 /project:rebuild-service name       # Rebuild after changes
+/project:retrospective              # Post-iteration self-improvement
 
 # Team orchestration commands
 /project:team-start                 # Spawn 5-agent team, auto-orchestrate
@@ -770,6 +821,14 @@ Follow the SPEC.md exactly. Do not add features not in the spec.
 | `/project:6-validate` | Cross-service validation | Build/test reports + integration plan | `phases/6-validate.md` |
 | `/project:7-review` | Quality + test completeness review | Built code + test reports | `phases/7-review.md` |
 
+### Ticket-Driven Commands
+
+| Command | Purpose | Input | Output |
+|---------|---------|-------|--------|
+| `/project:feature <JIRA-KEY>` | End-to-end feature from Jira ticket | Jira ticket | Context updates, specs, code, PRs — all tagged with Jira key |
+| `/project:feature <JIRA-KEY> --team` | Same + agent team for multi-service | Jira ticket | Same as above with parallel agent orchestration |
+| `/project:bugfix <JIRA-KEY>` | Surgical bugfix from Jira ticket | Jira bug ticket | Diagnosis, fix, regression test, PR — all tagged with Jira key |
+
 ### Utility Commands
 
 | Command | Purpose |
@@ -777,6 +836,7 @@ Follow the SPEC.md exactly. Do not add features not in the spec.
 | `/project:status` | Show phase progress and service states |
 | `/project:add-service <name> <type>` | Scaffold a new service folder |
 | `/project:rebuild-service <name>` | Incrementally rebuild after changes |
+| `/project:retrospective` | Post-iteration self-improvement analysis |
 
 ### Team Orchestration Commands
 

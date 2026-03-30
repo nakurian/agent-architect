@@ -95,7 +95,7 @@ services:
     owns_events: []                # events this service publishes
     notes: ""
 
-  # --- Example: BFF ---
+  # --- Example: BFF / API Gateway ---
   - name: "api-gateway"
     type: "bff"
     status: "new"
@@ -199,3 +199,29 @@ approvals: {}
 #   contract_review:
 #     approved_by: "@sarah"
 #     date: "2026-03-18"
+
+# ---------------------------------------------------------------------------
+# ACTIVE TICKETS — Jira tickets being worked on via /project:feature or /project:bugfix
+# ---------------------------------------------------------------------------
+# Agents populate this when running ticket-driven commands.
+# Each entry tracks the ticket key, type, affected services, branch, and status.
+# Completed tickets remain here as a history log until manually cleaned up.
+# ---------------------------------------------------------------------------
+active_tickets: []
+# Example:
+# active_tickets:
+#   - key: "GS-123"
+#     type: "feature"              # "feature" | "bugfix"
+#     summary: "Add order enrichment"
+#     priority: "High"
+#     services:
+#       - "order-service"
+#       - "api-gateway"
+#     branch_prefix: "feat/GS-123"
+#     started: "2026-03-30"
+#     status: "in-progress"        # "in-progress" | "built" | "merged" | "deployed"
+#     completed: null
+#     pr_links: []
+#     acceptance_criteria_met: null  # "2/3" format — met/total (see BUILD-REPORT for detail)
+#     root_cause: null               # bugfix only — one-sentence root cause
+#     notes: ""

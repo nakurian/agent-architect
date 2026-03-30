@@ -13,13 +13,14 @@ Run this after Phase 7 (or any time a full build cycle completes).
 
 Read these files to understand what happened during this iteration:
 
-1. `manifest.yaml` — services built, tech stack, quality gates
+1. `manifest.yaml` — services built, tech stack, quality gates, **and `active_tickets`** (ticket-driven work history)
 2. `phases/*.md` — all phase completion reports
-3. `services/*/specs/BUILD-REPORT.md` — build outcomes per service
-4. `services/*/specs/TEST-REPORT.md` — test execution results per service
-5. `phases/7-review.md` — review scorecard and issues found
-6. `context/decisions/` — ADRs created during this iteration
-7. `CLAUDE.md` — current agent rules (check if any were violated or insufficient)
+3. `phases/bugfixes.md` — bugfix log from `/project:bugfix` runs (if exists)
+4. `services/*/specs/BUILD-REPORT.md` — build outcomes per service
+5. `services/*/specs/TEST-REPORT.md` — test execution results per service
+6. `phases/7-review.md` — review scorecard and issues found
+7. `context/decisions/` — ADRs created during this iteration
+8. `CLAUDE.md` — current agent rules (check if any were violated or insufficient)
 
 Do NOT read the full `backend-system-design-standard.md` — you don't need it for this phase.
 
